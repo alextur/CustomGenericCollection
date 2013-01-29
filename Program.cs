@@ -11,9 +11,10 @@ namespace CustomGenericCollection
     public enum CarParts
     { Engine, Tires }
 
+    #region Engines
     public class Engine
     {
-        protected State engState;
+        public State engState;
         protected int maxSpeed;
         public Engine(int max)
         {
@@ -26,14 +27,21 @@ namespace CustomGenericCollection
 
     public class SportsEngine : Engine
     {
-        const int MAXSPEED = 220;
+        const int MAXSPEED = 240;
         public SportsEngine()
             : base(MAXSPEED) { }
     }
+    public class MiniVanEngine : Engine
+    {
+        const int MAXSPEED = 180;
+        public MiniVanEngine()
+            : base(MAXSPEED) { }
+    }
+    #endregion
 
     public class Tires
     {
-        protected State tiresState;
+        public State tiresState;
         protected int maxMileage;
         public Tires(int max)
         {
@@ -58,6 +66,7 @@ namespace CustomGenericCollection
         {
             petName = name;
         }
+        public abstract void BrokeHandler(object source, BrokeEventArgs args);
         public string PetName
         {
             get { return petName; }
@@ -80,22 +89,51 @@ namespace CustomGenericCollection
             engine = new SportsEngine();
             tires = new Tires(200);
         }
-        public void TurboBoost()
+        public override void BrokeHandler(object source, BrokeEventArgs args)
         {
-            MessageBox.Show("Ramming speed!", "Faster is better...");
+            switch (args._brokenPart)
+            {
+                case CarParts.Engine:
+                    engine.engState = State.Dead;
+                    break;
+                case CarParts.Tires:
+                    tires.tiresState = State.Dead;
+                    break;
+            }
+            commonState = State.Dead;
         }
+        //public void TurboBoost()
+        //{
+        //    MessageBox.Show("Ramming speed!", "Faster is better...");
+        //}
     }
-    //public class MiniVan : Car
-    //{
-    //    public MiniVan() { }
-    //    public MiniVan(string name, int max, int curr) : base(name, max, curr) { }
+    public class MiniVan : Car
+    {
+        public MiniVan() { }
+        public MiniVan (string name) : base(name) {
+            engine = new MiniVanEngine();
+            tires = new Tires(150);
+        }
+        public override void BrokeHandler(object source, BrokeEventArgs args)
+        {
+            switch (args._brokenPart)
+            {
+                case CarParts.Engine:
+                    engine.engState = State.Dead;
+                    break;
+                case CarParts.Tires:
+                    tires.tiresState = State.Dead;
+                    break;
+            }
+            commonState = State.Dead;
+        }
     //    public override void TurboBoost()
     //    {
     //        // У минивэнов возможности ускорения всегда плохие! 
     //        egnState = EngineState.engineDead;
     //        MessageBox.Show("Time to call AAA", "Your car is dead");
     //    }
-    //}
+    }
 
     public class BrokeEventArgs : EventArgs
     {
@@ -111,6 +149,7 @@ namespace CustomGenericCollection
         {
             _myCar = myCar;
             _speedLimit = myCar.engine.MaxSpeed;
+            BrokeEvent += new EventHandler<BrokeEventArgs>(_myCar.BrokeHandler);
         }
         void OnBrokeEvent(CarParts part)
         {
@@ -168,7 +207,7 @@ namespace CustomGenericCollection
 
       // CarCollection<Car> can hold any type deriving from Car.
       CarCollection<Car> myAutos = new CarCollection<Car>();
-      //myAutos.AddCar(new MiniVan("Family Truckster", 90, 0));
+      myAutos.AddCar(new MiniVan("Family Truckster"));
       myAutos.AddCar(new SportsCar("Crusher"));
       int i = 1;
       foreach (Car c in myAutos)
@@ -177,7 +216,6 @@ namespace CustomGenericCollection
             i, c.GetType().Name, c.PetName, c.engine.MaxSpeed, c.tires.MaxMileage);
           i++;
       }
-
       Console.ReadLine();
     }
   }
