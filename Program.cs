@@ -11,7 +11,7 @@ namespace CustomGenericCollection
     public enum CarParts
     { Engine, Tires }
 
-    public abstract class Engine
+    public class Engine
     {
         protected State engState;
         protected int maxSpeed;
@@ -26,20 +26,33 @@ namespace CustomGenericCollection
 
     public class SportsEngine : Engine
     {
+        const int MAXSPEED = 220;
         public SportsEngine()
-            : base(200)
+            : base(MAXSPEED) { }
+    }
+
+    public class Tires
+    {
+        protected State tiresState;
+        protected int maxMileage;
+        public Tires(int max)
         {
+            tiresState = State.Alive;
+            maxMileage = max;
         }
+        public int MaxMileage
+        { get { return maxMileage; } }
     }
 
 
     public abstract class Car
     {
+        public State commonState = State.Alive;
         protected string petName;
         protected int currSpeed;
-        //protected int maxSpeed;
-        protected Engine engine;
-        public abstract void TurboBoost();
+        public Engine engine;
+        public Tires tires;
+        //public abstract void TurboBoost();
         public Car() { }
         public Car(string name)
         {
@@ -63,25 +76,28 @@ namespace CustomGenericCollection
     public class SportsCar : Car
     {
         public SportsCar() { }
-        public SportsCar(string name, int max, int curr) : base(name, max, curr) { }
-        public override void TurboBoost()
+        public SportsCar(string name) : base(name) {
+            engine = new SportsEngine();
+            tires = new Tires(200);
+        }
+        public void TurboBoost()
         {
             MessageBox.Show("Ramming speed!", "Faster is better...");
         }
     }
-    public class MiniVan : Car
-    {
-        public MiniVan() { }
-        public MiniVan(string name, int max, int curr) : base(name, max, curr) { }
-        public override void TurboBoost()
-        {
-            // У минивэнов возможности ускорения всегда плохие! 
-            egnState = EngineState.engineDead;
-            MessageBox.Show("Time to call AAA", "Your car is dead");
-        }
-    }
+    //public class MiniVan : Car
+    //{
+    //    public MiniVan() { }
+    //    public MiniVan(string name, int max, int curr) : base(name, max, curr) { }
+    //    public override void TurboBoost()
+    //    {
+    //        // У минивэнов возможности ускорения всегда плохие! 
+    //        egnState = EngineState.engineDead;
+    //        MessageBox.Show("Time to call AAA", "Your car is dead");
+    //    }
+    //}
 
-    class BrokeEventArgs : EventArgs
+    public class BrokeEventArgs : EventArgs
     {
         public CarParts _brokenPart;
     }
@@ -94,6 +110,7 @@ namespace CustomGenericCollection
         public Driver(Car myCar)
         {
             _myCar = myCar;
+            _speedLimit = myCar.engine.MaxSpeed;
         }
         void OnBrokeEvent(CarParts part)
         {
@@ -148,38 +165,16 @@ namespace CustomGenericCollection
     {
       Console.WriteLine("***** Custom Generic Collection *****\n");
 
-      // Make a collection of Cars.
-      //CarCollection<Car> myCars = new CarCollection<Car>();
-      //myCars.AddCar(new Car("Rusty", 20, 10));
-      //myCars.AddCar(new Car("Zippy", 90, 70));
-
-      //foreach (Car c in myCars)
-      //{
-      //  Console.WriteLine("PetName: {0}, Speed: {1}",
-      //  c.PetName, c.Speed);
-      //}
-      //Console.WriteLine();
-
-      #region Odd ball type param for CarCollection!
-      // This is syntactically correct, but confusing at best!
-      //CarCollection<int> myInts = new CarCollection<int>();
-      //myInts.AddCar(5);
-      //myInts.AddCar(11);
-      //foreach (int i in myInts)
-      //{
-      //  Console.WriteLine("Int value: {0}", i);
-      //}
-      #endregion
 
       // CarCollection<Car> can hold any type deriving from Car.
       CarCollection<Car> myAutos = new CarCollection<Car>();
-      myAutos.AddCar(new MiniVan("Family Truckster", 90, 0));
-      myAutos.AddCar(new SportsCar("Crusher", 200, 0));
+      //myAutos.AddCar(new MiniVan("Family Truckster", 90, 0));
+      myAutos.AddCar(new SportsCar("Crusher"));
       int i = 1;
       foreach (Car c in myAutos)
       {
-          Console.WriteLine("{0}. Type: {1}, PetName: {2}, MaxSpeed: {3}",
-            i, c.GetType().Name, c.PetName, c.MaxSpeed);
+          Console.WriteLine("{0}. Type: {1}, PetName: {2}, MaxSpeed: {3}, MaxMileage: {4}",
+            i, c.GetType().Name, c.PetName, c.engine.MaxSpeed, c.tires.MaxMileage);
           i++;
       }
 
