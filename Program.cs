@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace CustomGenericCollection
@@ -60,13 +60,51 @@ namespace CustomGenericCollection
         protected int currSpeed;
         public Engine engine;
         public Tires tires;
+        public event EventHandler<BrokeEventArgs> BrokeEvent;
         //public abstract void TurboBoost();
         public Car() { }
         public Car(string name)
         {
             petName = name;
         }
-        public abstract void BrokeHandler(object source, BrokeEventArgs args);
+        public void IncSpeed()
+        {
+            currSpeed += 10;
+            Console.WriteLine("Current speed: {0}", CurrSpeed);
+            if (currSpeed > engine.MaxSpeed)
+            {
+                OnBrokeEvent(CarParts.Engine);
+                engine.engState = State.Dead;
+                commonState = State.Dead;
+                Console.WriteLine("Car is broken");
+            }
+        }
+        public void DecSpeed()
+        {
+            if (currSpeed > 0)
+            {
+                currSpeed -= 10;
+                Console.WriteLine("Current speed: {0}", CurrSpeed);
+            }
+            else
+            {
+                Console.WriteLine("You do not move");
+            }
+        }
+        public void Stop()
+        {
+            CurrSpeed = 0;
+            Console.WriteLine("You stopped");
+        }
+        void OnBrokeEvent(CarParts part)
+        {
+            BrokeEventArgs b = new BrokeEventArgs();
+            if (BrokeEvent != null)
+            {
+                b._brokenPart = part;
+                BrokeEvent(this, b);
+            }
+        }
         public string PetName
         {
             get { return petName; }
@@ -89,23 +127,6 @@ namespace CustomGenericCollection
             engine = new SportsEngine();
             tires = new Tires(200);
         }
-        public override void BrokeHandler(object source, BrokeEventArgs args)
-        {
-            switch (args._brokenPart)
-            {
-                case CarParts.Engine:
-                    engine.engState = State.Dead;
-                    break;
-                case CarParts.Tires:
-                    tires.tiresState = State.Dead;
-                    break;
-            }
-            commonState = State.Dead;
-        }
-        //public void TurboBoost()
-        //{
-        //    MessageBox.Show("Ramming speed!", "Faster is better...");
-        //}
     }
     public class MiniVan : Car
     {
@@ -114,25 +135,6 @@ namespace CustomGenericCollection
             engine = new MiniVanEngine();
             tires = new Tires(150);
         }
-        public override void BrokeHandler(object source, BrokeEventArgs args)
-        {
-            switch (args._brokenPart)
-            {
-                case CarParts.Engine:
-                    engine.engState = State.Dead;
-                    break;
-                case CarParts.Tires:
-                    tires.tiresState = State.Dead;
-                    break;
-            }
-            commonState = State.Dead;
-        }
-    //    public override void TurboBoost()
-    //    {
-    //        // У минивэнов возможности ускорения всегда плохие! 
-    //        egnState = EngineState.engineDead;
-    //        MessageBox.Show("Time to call AAA", "Your car is dead");
-    //    }
     }
 
     public class BrokeEventArgs : EventArgs
@@ -142,27 +144,44 @@ namespace CustomGenericCollection
     public class Driver
     {
         Car _myCar;
-        public event EventHandler<BrokeEventArgs> BrokeEvent;
-        int _speedLimit;
-        int _currSpeed = 0;
         public Driver(Car myCar)
         {
             _myCar = myCar;
-            _speedLimit = myCar.engine.MaxSpeed;
-            BrokeEvent += new EventHandler<BrokeEventArgs>(_myCar.BrokeHandler);
+            //_speedLimit = myCar.engine.MaxSpeed;
+            _myCar.BrokeEvent += new EventHandler<BrokeEventArgs>(BrokeHandler);
         }
-        void OnBrokeEvent(CarParts part)
-        {
-            BrokeEventArgs b = new BrokeEventArgs();
-            if (BrokeEvent != null)
-            {
-                b._brokenPart = part;
-                BrokeEvent(this, b);
-            }
-        }
+        public void BrokeHandler(object source, BrokeEventArgs args) { }
+
         public void Control()
         {
-
+            if (_myCar.commonState == State.Alive)
+            {
+                ConsoleKeyInfo key;
+                do
+                {
+                    key = Console.ReadKey();
+                    switch (key.Key)
+                    {
+                        case ConsoleKey.UpArrow:
+                            _myCar.IncSpeed();
+                            break;
+                        case ConsoleKey.DownArrow:
+                            _myCar.DecSpeed();
+                            break;
+                        case ConsoleKey.S:
+                            _myCar.Stop();
+                            Console.WriteLine("Exit");
+                            break;
+                        default:
+                            Console.WriteLine("Wrong key");
+                            break;
+                    }
+                } while (key.Key != ConsoleKey.S && _myCar.commonState == State.Alive);
+            }
+            else
+            {
+                Console.WriteLine("Your car needs a diagnostics");
+            }
         }
         
     }
@@ -173,12 +192,64 @@ namespace CustomGenericCollection
         {
             _car = car;
         }
-
+        public void Diagnose()
+        {
+            if (_car.commonState == State.Alive)
+            {
+                Console.WriteLine("Your car is good");
+                return;
+            }
+            ConsoleKeyInfo key;
+            if (_car.engine.engState == State.Dead)
+            {
+                Console.WriteLine("Engine is dead \nDo you want to repair? \nType 'y' or 'n':");
+                key = Console.ReadKey();
+                switch (key.Key)
+                {
+                    case ConsoleKey.Y:
+                        Type t = _car.engine.GetType();
+                        ConstructorInfo[] ci = t.GetConstructors();
+                        int x;
+                        for (x = 0; x < ci.Length; x++)
+                        {
+                            ParameterInfo[] pi = ci[x].GetParameters();
+                            if (pi.Length == 0) break;
+                        }
+                        _car.engine = (Engine)ci[x].Invoke(null);
+                        Console.WriteLine("You have a new engine");
+                        break;
+                    case ConsoleKey.N:
+                        break;
+                }
+            }
+            if (_car.tires.tiresState == State.Dead)
+            {
+                Console.WriteLine("Tires is dead \nDo you want to repair? \nType 'y' or 'n':");
+                key = Console.ReadKey();
+                switch (key.Key)
+                {
+                    case ConsoleKey.Y:
+                        Type t = _car.tires.GetType();
+                        ConstructorInfo[] ci = t.GetConstructors();
+                        int x;
+                        for (x = 0; x < ci.Length; x++)
+                        {
+                            ParameterInfo[] pi = ci[x].GetParameters();
+                            if (pi.Length == 0) break;
+                        }
+                        _car.tires = (Tires)ci[x].Invoke(null);
+                        Console.WriteLine("You have a new engine");
+                        break;
+                    case ConsoleKey.N:
+                        break;
+                }
+            }
+        }
     }
 
   #endregion
 
-  #region Custom Generic Collection
+  #region Car Collection
   public class CarCollection<T> : IEnumerable<T> where T : Car
   {
     private List<T> arCars = new List<T>();
@@ -229,6 +300,15 @@ namespace CustomGenericCollection
             i, c.GetType().Name, c.PetName, c.engine.MaxSpeed, c.tires.MaxMileage);
           i++;
       }
+      Console.Write("Your choose: ");
+      i = int.Parse(Console.ReadLine());
+      Car car = myAutos.GetCar(--i);
+      Driver driver = new Driver(car);
+      Console.WriteLine("Let's go!");
+      driver.Control();
+      Console.WriteLine("Let's diagnosis!");
+      Diagnostics diagnostics = new Diagnostics(car);
+      diagnostics.Diagnose();
       Console.ReadLine();
     }
   }
