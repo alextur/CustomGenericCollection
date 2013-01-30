@@ -12,7 +12,7 @@ namespace CustomGenericCollection
     { Engine, Tires }
 
     #region Engines
-    public class Engine
+    public abstract class Engine
     {
         public State engState;
         protected int maxSpeed;
@@ -160,7 +160,20 @@ namespace CustomGenericCollection
                 BrokeEvent(this, b);
             }
         }
+        public void Control()
+        {
+
+        }
         
+    }
+    public class Diagnostics
+    {
+        Car _car;
+        public Diagnostics(Car car)
+        {
+            _car = car;
+        }
+
     }
 
   #endregion
